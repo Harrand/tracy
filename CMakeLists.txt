@@ -1,20 +1,20 @@
 cmake_minimum_required(VERSION 3.10)
-
 # Tracy Client Library (Based on tracy.pdf from May 19, 2021)
 add_library(TracyClient
     TracyClient.cpp
 )
 target_include_directories(TracyClient PUBLIC ./)
 target_compile_options(TracyClient PUBLIC -DTRACY_ENABLE)
+target_link_libraries(TracyClient PUBLIC ws2_32 imagehlp dbghelp)
 
 # Tracy Server Executable (Based on same tracy.pdf)
 # Requires installation of various dependencies on each platform.
 # We will do a local installation within the project directory - No other changes to the machine are made.
 if(WIN32)
     # There is a magic script we can run.
-    add_custom_command(TARGET TracyServerDepInstall
-        POST_BUILD
-        COMMAND cmd //C ./vcpkg)
+    add_custom_target(TracyServerDepInstall
+        COMMENT "Installing Tracy Server dependencies via vcpkg"
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/install_vcpkg_dependencies.bat)
 elseif(UNIX)
     # We require pkg-config.
 else()
@@ -92,14 +92,19 @@ profiler/src/imgui_impl_opengl3.cpp
 profiler/src/main.cpp
 profiler/src/NativeWindow.cpp
 profiler/src/ResolvService.cpp
-profiler/src/winmain.c
+profiler/src/winmain.cpp
+profiler/src/winmainArchDiscovery
 )
 
 target_link_directories(TracyServer PRIVATE vcpkg/vcpkg/installed/x64-windows-static/debug/lib)
 target_include_directories(TracyServer PRIVATE
 profiler/libs/gl3w
 imgui
-vcpkg/vcpkg/installed/x64-windows-static/include
-vcpkg/vcpkg/installed/x64-windows-static/include/capstone
+${PROJECT_BINARY_DIR}/lib/tracy/vcpkg/installed/x64-windows-static/include
+${PROJECT_BINARY_DIR}/lib/tracy/vcpkg/installed/x64-windows-static/include/capstone
 )
-target_link_libraries(TracyServer PRIVATE TracyServerDepInstall brotlicommon-static brotlidec-static ws2_32 freetyped glfw3 libpng16d zlibd bz2d capstone)
+add_dependencies(TracyServer TracyServerDepInstall)
+target_link_directories(TracyServer PRIVATE ${PROJECT_BINARY_DIR}/lib/tracy/vcpkg/installed/x64-windows-static/lib)
+target_link_libraries(TracyServer PRIVATE brotlicommon-static brotlidec-static ws2_32 freetype glfw3 libpng16 zlib bz2 capstone)
+target_compile_options(TracyServer PRIVATE -mlzcnt)
+target_compile_definitions(TracyServer PRIVATE -DNOMINMAX)
