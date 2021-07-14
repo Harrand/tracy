@@ -12,9 +12,15 @@ target_link_libraries(TracyClient PUBLIC ws2_32 imagehlp dbghelp)
 # We will do a local installation within the project directory - No other changes to the machine are made.
 if(WIN32)
     # There is a magic script we can run.
+    if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        add_custom_target(TracyServerDepInstall
+            COMMENT "Installing Tracy Server dependencies via vcpkg (MSVC)"
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/install_vcpkg_dependencies.bat)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_custom_target(TracyServerDepInstall
-        COMMENT "Installing Tracy Server dependencies via vcpkg"
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/install_vcpkg_dependencies.bat)
+        COMMENT "Installing Tracy Server dependencies via vcpkg (GNU/Clang)"
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/install_vcpkg_dependencies_mingw.bat)
+    endif()
 elseif(UNIX)
     # We require pkg-config.
 else()
@@ -94,17 +100,28 @@ profiler/src/NativeWindow.cpp
 profiler/src/ResolvService.cpp
 profiler/src/winmain.cpp
 profiler/src/winmainArchDiscovery
+profiler/build/win32/Tracy.rc
 )
 
-target_link_directories(TracyServer PRIVATE vcpkg/vcpkg/installed/x64-windows-static/debug/lib)
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    set(TracyServerLinkDirectories ${PROJECT_BINARY_DIR}/lib/tracy/vcpkg/installed/x64-windows-static/lib)
+    set(TracyServerIncludeDirectories ${PROJECT_BINARY_DIR}/lib/tracy/vcpkg/installed/x64-windows-static/include ${PROJECT_BINARY_DIR}/lib/tracy/vcpkg/installed/x64-windows-static/include/capstone)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    set(TracyServerLinkDirectories ${PROJECT_BINARY_DIR}/lib/tracy/vcpkg/installed/x64-mingw-static/lib)
+    set(TracyServerIncludeDirectories ${PROJECT_BINARY_DIR}/lib/tracy/vcpkg/installed/x64-mingw-static/include ${PROJECT_BINARY_DIR}/lib/tracy/vcpkg/installed/x64-mingw-static/include/capstone)
+endif()
 target_include_directories(TracyServer PRIVATE
 profiler/libs/gl3w
 imgui
-${PROJECT_BINARY_DIR}/lib/tracy/vcpkg/installed/x64-windows-static/include
-${PROJECT_BINARY_DIR}/lib/tracy/vcpkg/installed/x64-windows-static/include/capstone
+${TracyServerIncludeDirectories}
 )
 add_dependencies(TracyServer TracyServerDepInstall)
-target_link_directories(TracyServer PRIVATE ${PROJECT_BINARY_DIR}/lib/tracy/vcpkg/installed/x64-windows-static/lib)
-target_link_libraries(TracyServer PRIVATE brotlicommon-static brotlidec-static ws2_32 freetype glfw3 libpng16 zlib bz2 capstone)
+target_link_directories(TracyServer PRIVATE ${TracyServerLinkDirectories})
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    target_link_libraries(TracyServer PRIVATE brotlicommon-static brotlidec-static brotlienc-static ws2_32 freetype glfw3 png16 zlib bz2 capstone)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_link_libraries(TracyServer PRIVATE ws2_32 freetype glfw3 png16 zlib bz2 capstone oleaut32 imm32)
+
+endif()
 target_compile_options(TracyServer PRIVATE -mlzcnt)
 target_compile_definitions(TracyServer PRIVATE -DNOMINMAX)
