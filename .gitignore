@@ -30,6 +30,7 @@ profiler/build/win32/Tracy.aps
 # include the vcpkg install script but not the files it produces
 vcpkg/*
 !vcpkg/install_vcpkg_dependencies.bat
+!vcpkg/install_vcpkg_dependencies_mingw.bat
 .deps/
 .dirstamp
 .vscode/
