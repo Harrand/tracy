@@ -17,17 +17,19 @@ if(WIN32)
             COMMENT "Installing Tracy Server dependencies via vcpkg (MSVC)"
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/install_vcpkg_dependencies.bat)
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_custom_target(TracyServerDepInstall
-        COMMENT "Installing Tracy Server dependencies via vcpkg (GNU/Clang)"
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/install_vcpkg_dependencies_mingw.bat)
+        add_custom_target(TracyServerDepInstall
+            COMMENT "Installing Tracy Server dependencies via vcpkg (GNU/Clang)"
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/install_vcpkg_dependencies_mingw.bat)
     endif()
 elseif(UNIX)
     # We require pkg-config.
+    add_custom_target(TracyServerDepInstall
+        COMMENT "Tracy Server is not yet supported for xnix. Please do not try to build it.")
 else()
-    message(STATUS "Warning: Tracy Server is not supported for this platform")
+    add_custom_target(TracyServerDepInstall
+        COMMENT "Tracy Server is not yet supported for this platform. Please do not try to build it.")
 endif()
 
-# TODO: Create TracyServer target.
 add_executable(TracyServer
 common/TracySocket.cpp
 common/TracyStackFrames.cpp
